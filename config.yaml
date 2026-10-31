@@ -1,0 +1,42 @@
+listen: ":8053"
+path: /dns-query
+# tls_cert: /etc/doh/cert.pem
+# tls_key: /etc/doh/key.pem
+timeout: 5s
+
+upstreams:
+  cloudflare: https://cloudflare-dns.com/dns-query
+  google: https://dns.google/dns-query
+  quad9-dot: tls://9.9.9.9:853
+  local: udp://192.168.1.1:53
+
+# Used when no rule matches.
+default: cloudflare
+
+# First matching rule wins, so put more specific rules first.
+rules:
+  # Exact domain through a specific upstream
+  - domain: example.com
+    upstream: google
+
+  # Wildcard: all subdomains of corp.internal go to the LAN resolver
+  - domain: "*.corp.internal"
+    upstream: local
+
+  # Remap one domain to another (client asks for old.example.net,
+  # gets the records of example.org)
+  - domain: old.example.net
+    remap: example.org
+
+  # Wildcard remap keeping the prefix: www.foo.test -> www.example.com
+  - domain: "*.foo.test"
+    remap: "*.example.com"
+    upstream: quad9-dot
+
+  # Wildcard remap to a single target: anything.bar.test -> example.com
+  - domain: "*.bar.test"
+    remap: example.com
+
+  # Literal address instead of a named upstream also works
+  - domain: "*.cn"
+    upstream: 223.5.5.5
