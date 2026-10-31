@@ -133,14 +133,27 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hadEDNS := req.IsEdns0() != nil
+	ecs := &s.cfg.ECS
+	addedECS := ecs.Enabled && ecs.addClientSubnet(req, ecs.clientIP(r))
+
 	resp := s.Resolve(r.Context(), req)
+	if addedECS {
+		stripClientSubnet(resp, hadEDNS)
+	}
 	out, err := resp.Pack()
 	if err != nil {
 		http.Error(w, "pack error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/dns-message")
-	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", minTTL(resp)))
+	cacheControl := fmt.Sprintf("max-age=%d", minTTL(resp))
+	if addedECS {
+		// The answer depends on the client's address, which isn't in the URL, so
+		// a shared HTTP cache must not hand it to clients in other networks.
+		cacheControl = "private, " + cacheControl
+	}
+	w.Header().Set("Cache-Control", cacheControl)
 	w.Write(out)
 }
 

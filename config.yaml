@@ -13,6 +13,16 @@ upstreams:
 # Used when no rule matches.
 default: cloudflare
 
+# EDNS Client Subnet: send the client's network to upstreams so they can return
+# nearby answers. Off by default because it reveals the client's network to them.
+# Not every upstream uses it (Google does; Cloudflare 1.1.1.1 and Quad9 9.9.9.9 don't).
+# ecs:
+#   enabled: true
+#   ipv4_prefix: 24
+#   ipv6_prefix: 56
+#   # Behind a reverse proxy, list it here so X-Forwarded-For is believed.
+#   trusted_proxies: [127.0.0.1, "::1"]
+
 # First matching rule wins, so put more specific rules first.
 rules:
   # Exact domain through a specific upstream

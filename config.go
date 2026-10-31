@@ -28,6 +28,8 @@ type Config struct {
 	Default string `yaml:"default"`
 
 	Rules []Rule `yaml:"rules"`
+
+	ECS ECSConfig `yaml:"ecs"`
 }
 
 type Rule struct {
@@ -46,12 +48,20 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg := &Config{Listen: ":8053", Path: "/dns-query", Timeout: 5 * time.Second}
+	cfg := &Config{
+		Listen:  ":8053",
+		Path:    "/dns-query",
+		Timeout: 5 * time.Second,
+		ECS:     ECSConfig{IPv4Prefix: 24, IPv6Prefix: 56},
+	}
 	if err := yaml.Unmarshal(b, cfg); err != nil {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
 	if cfg.Default == "" {
 		return nil, fmt.Errorf("config: 'default' upstream is required")
+	}
+	if err := cfg.ECS.validate(); err != nil {
+		return nil, fmt.Errorf("config: ecs: %w", err)
 	}
 	for i := range cfg.Rules {
 		r := &cfg.Rules[i]
